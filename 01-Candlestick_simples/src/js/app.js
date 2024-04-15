@@ -11,7 +11,7 @@ const chartOptions = {
 };
 
 const chart = createChart(
-  document.getElementById("app"),
+  document.getElementById("lightweight-chart"),
   chartOptions
 );
 
@@ -40,7 +40,7 @@ data = data.map((item) => ({
 candlestickSeries.setData(data);
 
 
-chart.timeScale().fitContent();
+chart.timeScale().scrollToPosition(5, true);
 
 let news_candles = [
   {
