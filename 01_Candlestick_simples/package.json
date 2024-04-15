@@ -24,6 +24,7 @@
     "development": "node_modules/.bin/cross-env NODE_ENV=development node_modules/webpack/bin/webpack.js --progress --config=node_modules/laravel-mix/setup/webpack.config.js",
     "watch": "npm run development -- --watch",
     "prod": "npm run production",
-    "production": "node_modules/.bin/cross-env NODE_ENV=production node_modules/webpack/bin/webpack.js --no-progress --config=node_modules/laravel-mix/setup/webpack.config.js"
+    "production": "node_modules/.bin/cross-env NODE_ENV=production node_modules/webpack/bin/webpack.js --no-progress --config=node_modules/laravel-mix/setup/webpack.config.js",
+    "start": "npm run dev && http-server ./public -p 8080 -a localhost -c-1"
   }
 }
