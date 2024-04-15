@@ -57,7 +57,7 @@ class ChartManager {
         volume: parseInt(item.volume),
       }));
       this.candlestickSeries.setData(data);
-      this.chart.timeScale().scrollToPosition(data.length - 5, true);
+      this.chart.timeScale().scrollToPosition(2, true);
       console.log("Data loaded successfully");
     } catch (error) {
       console.error("Error fetching or parsing data:", error);
