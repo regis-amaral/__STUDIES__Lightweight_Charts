@@ -20,12 +20,3 @@ wss.on("connection", (ws) => {
     clientBinance.unsubscribe(client);
   });
 });
-
-// CRIA UM SERVIDOR WEB PARA SERVIR A APLICAÇÃO WEB
-const app = express();
-const publicPath = path.join(__dirname, "../webserver/public");
-app.use(express.static(publicPath));
-
-app.listen(8080, () => {
-  console.log(`Web server is running at http://localhost:8080`);
-});
