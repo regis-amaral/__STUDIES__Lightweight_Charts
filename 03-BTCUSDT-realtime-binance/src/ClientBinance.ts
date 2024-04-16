@@ -49,8 +49,8 @@ class ClientBinance {
       });
 
       this.ws.on("message", (data: any) => {
-        console.log(JSON.parse(data));
-        this.notifyObservers(data);
+        // console.log(JSON.parse(data));
+        this.notifyObservers(JSON.stringify(JSON.parse(data)));
       });
 
       this.ws.on("close", () => {
