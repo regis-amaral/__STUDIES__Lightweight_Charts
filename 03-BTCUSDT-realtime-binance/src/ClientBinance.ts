@@ -13,7 +13,7 @@ class ClientBinance {
 
   constructor() {
     this.observers = [];
-    this.url = "wss://stream.binance.com:9443/ws/btcusdt@kline_1s";
+    this.url = "wss://stream.binance.com:9443/ws/btcusdt@kline_1m";
     this.restartTime = 60 * 60 * 10000; // Restart a cada 10 horas
     this.timer = null;
     this.ws = new WebSocket(this.url);
