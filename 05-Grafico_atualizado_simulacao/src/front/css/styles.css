@@ -1,0 +1,7 @@
+body {
+    font-family: Arial, sans-serif;
+}
+#lightweight-chart {
+    height: 100vh;
+    width: 100%;
+}
