@@ -6,7 +6,7 @@ import ClientBinanceSimulado from "./ClientBinanceSimulado.js";
 
 // CONECTA COMO CLIENTE NO WEBSOCKET DA BINANCE
 // const clientBinance = new ClientBinance();
-const clientBinance = new ClientBinanceSimulado(new Date("2020/03/16 19:00:00").getTime(), 50);
+const clientBinance = new ClientBinanceSimulado(new Date("2024/04/17 12:34:00").getTime(), 50);
 
 // CRIA UM WEBSOCKET SERVER PARA NOTIFICAR OS CLIENTES WEB
 const wss = new WebSocket.Server({ port: 8081 });

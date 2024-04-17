@@ -4,6 +4,15 @@ interface Observer {
   update: (data: any) => void;
 }
 
+interface CandlestickData {
+  time: number;
+  open: string;
+  high: string;
+  low: string;
+  close: string;
+  volume: number;
+}
+
 class ClientBinanceSimulado {
   private observers: Observer[];
 
@@ -17,6 +26,8 @@ class ClientBinanceSimulado {
   private currentIndex: number;
   private data: any[] | null;
   private timer: NodeJS.Timeout | null;
+
+  private lastCandle: CandlestickData | null = null;
 
   constructor(startChartTimestamp: number, transmissionSpeed: number) {
     this.observers = [];
@@ -95,15 +106,43 @@ class ClientBinanceSimulado {
   }
 
   private configDataToSend(dataToSend: string) {
-    console.log(dataToSend);
-    let data =  {
-      date: dataToSend[6], // Kline Close time
-      open: dataToSend[1], // Open price
-      high: dataToSend[2], // High price
-      low: dataToSend[3], // Low price
-      close: dataToSend[4], // Close price
-      volume: dataToSend[5], // Volume
+    // Constrói tempo com segundos zerados para candle de 1 minuto
+    let date = new Date(dataToSend[6]);
+    date.setSeconds(0);
+    let time = Math.floor(date.getTime() / 1000);
+    
+    let data = null;
+
+    if(!this.lastCandle){
+      this.lastCandle = {} as CandlestickData;
+    }
+
+    if (this.lastCandle.time == time){
+      // atualiza candle atual
+      this.lastCandle.open = this.lastCandle.open; // Open price
+      this.lastCandle.high = dataToSend[2] > this.lastCandle.high ? dataToSend[2] : this.lastCandle.high, // High price
+      this.lastCandle.low = dataToSend[3] < this.lastCandle.low ? dataToSend[3] : this.lastCandle.low, // Low price
+      this.lastCandle.close = dataToSend[4], // Close price
+      this.lastCandle.volume += parseFloat(dataToSend[5]);  // Volume
+    }else{
+      console.log("Novo candle", time);
+      this.lastCandle.time = time;
+      this.lastCandle.open = dataToSend[1];
+      this.lastCandle.high = dataToSend[2];
+      this.lastCandle.low = dataToSend[3];
+      this.lastCandle.close = dataToSend[4];
+      this.lastCandle.volume = parseFloat(dataToSend[5]);
+    }
+    
+    data = {
+      date: this.lastCandle.time,
+      open: this.lastCandle.open,
+      high: this.lastCandle.high,
+      low: this.lastCandle.low,
+      close: this.lastCandle.close,
+      volume: this.lastCandle.volume,
     };
+    
     console.log(data);
     return JSON.stringify(data);
   }

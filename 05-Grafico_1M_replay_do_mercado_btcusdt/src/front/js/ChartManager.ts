@@ -46,7 +46,7 @@ class ChartManager {
       title: "Graph",
       localization: {
         dateFormat: "dd-MM-yyyy",
-        locale: "en-US",
+        locale: "pt-BR",
       },
       priceScale: {
         position: "right",
@@ -117,7 +117,7 @@ class ChartManager {
     try {
       console.log("Loading data...");
       const data = jsonData.map((item) => ({
-        time: item.time * 1000,
+        time: item.time,
         open: (item as CandlestickData).open,
         high: (item as CandlestickData).high,
         low: (item as CandlestickData).low,
