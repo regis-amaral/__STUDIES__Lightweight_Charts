@@ -1,8 +1,8 @@
 const axios = require("axios");
 
 class ChartManager {
-  constructor(response, startChartTimestamp, transmissionSpeed) {
-    this.response = response; // Armazena a resposta HTTP
+  constructor(client, startChartTimestamp, transmissionSpeed) {
+    this.client = client; // Armazena o cliente http
     this.symbol = "BTCUSDT";
     this.interval = "1s";
     this.startChartTimestamp = startChartTimestamp;
@@ -70,7 +70,7 @@ class ChartManager {
       }
       const dataToSend = this.data[this.currentIndex];
       // Configura e envia os dados para o cliente
-      this.response.write(`data: ${this.configDataToSend(dataToSend)}\n\n`);
+      this.client.response.write(`data: ${this.configDataToSend(dataToSend)}\n\n`);
       console.log(`Enviando dado do índice ${this.currentIndex}`);
       this.currentIndex++;
       this.timer = setTimeout(sendData, this.transmissionSpeed);
