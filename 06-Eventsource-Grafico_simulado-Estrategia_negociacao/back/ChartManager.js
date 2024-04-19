@@ -1,43 +1,117 @@
+const { log, error } = console;
 const axios = require("axios");
+const IndicatorService = require("./IndicatorService");
 
 class ChartManager {
   constructor(client, startChartTimestamp, transmissionSpeed) {
+    //
+    this.indicatorService = new IndicatorService(); // Instância do serviço de indicadores
+    //
     this.client = client; // Armazena o cliente http
     this.symbol = "BTCUSDT";
     this.interval = "1s";
     this.startChartTimestamp = startChartTimestamp;
     this.transmissionSpeed = transmissionSpeed;
     this.currentIndex = 0;
-    this.data = null;
-    this.quantity = 1000;
-    this.apiUrl = this.getApiUrl(startChartTimestamp);
+    this.dataChart1s = null;
+    this.dataChart1m = [];
+    
     this.timer = null;
     this.run = true;
     this.lastCandle = null;
-    this.startFetchingData();
+    
+    this.preloadingDataChart1m(1000).then(() => {
+      this.startFetchingData();
+    });
   }
 
-  getApiUrl(startChartTimestamp) {
-    this.apiUrl =
+  getApiUrl(symbol, interval, startChartTimestamp, quantity) {
+    let url =
       `https://api.binance.com/api/v3/klines?` +
-      `symbol=${this.symbol}&` +
-      `interval=${this.interval}&` +
+      `symbol=${symbol}&` +
+      `interval=${interval}&` +
       `startTime=${startChartTimestamp}&` +
-      `limit=${this.quantity}`;
-    return this.apiUrl;
+      `limit=${quantity}`;
+    return url;
   }
+
+  async preloadingDataChart1m(minutesAgo) {
+    try{
+      // Calcula o tempo de minutesAgo minutos atrás
+      const twentyMinutesInMillis = minutesAgo * 60 * 1000; // minutesAgo minutos em milissegundos
+      const startTimeTwentyMinutesAgo =
+        this.startChartTimestamp - twentyMinutesInMillis;
+
+      let url = this.getApiUrl(
+        this.symbol,
+        "1m",
+        startTimeTwentyMinutesAgo,
+        minutesAgo
+      );
+      const resp = await axios.get(url);
+      const data = resp.data;
+
+      let chartData = this.dataPreprocessing(data);
+
+      // adiciona indicadores
+      chartData = await this.indicatorService.setIndicators(chartData);
+
+      log("quantidade de registros: ", chartData.length);
+
+      this.dataChart1m = chartData;
+
+      this.client.response.write(
+        `data: ${JSON.stringify(this.dataChart1m)}\n\n`
+      );
+    }catch(e){
+      error("Erro ao precarregar dados do gráfico de 1m", e);
+    }
+  }
+
+  dataPreprocessing(data){
+    
+    // Ajusta o tempo para GMT-3
+    let setDt = (dt) => {
+      let d = new Date(dt);
+      return d.setHours(d.getHours() - 3);
+    };
+    
+    return data.map((d) => ({
+      time: setDt(d[0]) / 1000,
+      date: new Date(setDt(d[0])),
+      open: d[1] * 1,
+      high: d[2] * 1,
+      low: d[3] * 1,
+      close: d[4] * 1,
+      volume: d[5] * 1,
+    }));
+  }
+
 
   /**
-   * Busca os dados do gráfico na API da Binance
+   * Busca os dados do mercado na API da Binance
    * @returns {Promise<void>} Uma promise que é resolvida quando os dados do gráfico são buscados com sucesso.
    */
   async fetchChartData() {
-    try {
-      const response = await axios.get(this.apiUrl);
+    try{
+      const resp = await axios.get(
+        this.getApiUrl(
+          this.symbol,
+          this.interval,
+          this.startChartTimestamp,
+          1000
+        )
+      );
+
+      const data = resp.data;
+      let klinedata = this.dataPreprocessing(data);
+
       // Adiciona os dados buscados ao conjunto de dados existentes
-      this.data = this.data ? [...this.data, ...response.data] : response.data;
-    } catch (error) {
-      console.error(`Error fetching chart data: ${error}`);
+      this.dataChart1s = this.dataChart1s
+        ? [...this.dataChart1s, ...klinedata]
+        : klinedata;
+    }catch(e){
+      error("Erro ao buscar dados do gráfico de " . this.interval, e);
     }
   }
 
@@ -46,83 +120,84 @@ class ChartManager {
    * @returns {Promise<void>} Uma promise que é resolvida quando a busca e o envio de dados estiverem completos.
    */
   async startFetchingData() {
+    // solicita o primeiro conjunto de dados
     await this.fetchChartData();
-    if (!this.data) return;
 
+    if (!this.dataChart1s) return;
+
+    // inicializa o envio de dados
     const sendData = async () => {
+      // encerra a transmissão se a execução foi interrompida pelo App.js
       if (!this.run) {
         clearTimeout(this.timer);
         return;
       }
+
       // atualiza um pouco antes de alcançar o fim da lista sem parar a execução do código
-      if (this.currentIndex == this.data.length - 100) {
-        const initialStartTime = Date.now();
-        // Envia novo request com startTime incrementado
-        this.startChartTimestamp += this.quantity * 1000;
+      if (this.currentIndex == this.dataChart1s.length - 100) {
+        // Envia novo request com startTime incrementado em 1000 segundos
+        this.startChartTimestamp += 1000 * 1000;
         this.apiUrl = this.getApiUrl(this.startChartTimestamp);
-        this.fetchChartData().then(() => {
-          if (!this.data) return;
-          const finalStartTime = Date.now();
-          console.log(
-            `Tempo de espera: ${finalStartTime - initialStartTime}ms`
-          );
-        });
+        await this.fetchChartData();
+        if (!this.dataChart1s) return;
+        log("Novos dados de mercado recebidos com sucesso");
       }
-      const dataToSend = this.data[this.currentIndex];
-      // Configura e envia os dados para o cliente
-      this.client.response.write(`data: ${this.configDataToSend(dataToSend)}\n\n`);
-      console.log(`Enviando dado do índice ${this.currentIndex}`);
-      this.currentIndex++;
+
+      const dataToSend = this.dataChart1s[this.currentIndex];
+
+      // Constrói tempo com segundos zerados para candle de 1 minuto
+      let date = new Date(dataToSend.time * 1000);
+      date.setSeconds(0);
+      dataToSend.time = date.getTime() / 1000;
+
+      try {
+        // Verifica se é um novo candle e recalcula os indicadores
+        if (this.lastCandle && this.lastCandle.time != dataToSend.time) {
+          this.dataChart1m.push(this.lastCandle);
+          let r = await this.indicatorService.setIndicators(this.dataChart1m.slice(-200));
+          // envia o ultimo candle com o indicador calculado
+          this.client.response.write(`data: ${JSON.stringify(r[r.length - 1])}\n\n`);
+        }
+
+        // Configura e envia os dados para o cliente
+        const formattedData = await this.configDataToSend(dataToSend);
+        this.client.response.write(`data: ${formattedData}\n\n`);
+        this.currentIndex++;
+      } catch (e) {
+        log(`Enviando dado do índice ${this.currentIndex}`);
+        log(dataToSend);
+        error("Erro ao configurar dados:", e);
+      }
       this.timer = setTimeout(sendData, this.transmissionSpeed);
     };
 
     sendData();
   }
 
-  configDataToSend(dataToSend) {
-    // Constrói tempo com segundos zerados para candle de 1 minuto
-    let date = new Date(dataToSend[6]);
-    date.setSeconds(0);
-    let time = Math.floor(date.getTime() / 1000);
-
-    let data = null;
-
+  async configDataToSend(dataToSend) {
+    
     if (!this.lastCandle) {
       this.lastCandle = {};
     }
 
-    if (this.lastCandle.time == time) {
+    if (this.lastCandle.time == dataToSend.time) {
       // atualiza candle atual
       this.lastCandle.high =
-        dataToSend[2] > this.lastCandle.high
-          ? dataToSend[2]
+        dataToSend.high > this.lastCandle.high
+          ? dataToSend.high
           : this.lastCandle.high;
       this.lastCandle.low =
-        dataToSend[3] < this.lastCandle.low
-          ? dataToSend[3]
+        dataToSend.low < this.lastCandle.low
+          ? dataToSend.low
           : this.lastCandle.low;
-      this.lastCandle.close = dataToSend[4];
-      this.lastCandle.volume += parseFloat(dataToSend[5]);
+      this.lastCandle.close = dataToSend.close;
+      this.lastCandle.volume += parseFloat(dataToSend.close);
     } else {
-      console.log("Novo candle", time);
-      this.lastCandle.time = time;
-      this.lastCandle.open = dataToSend[1];
-      this.lastCandle.high = dataToSend[2];
-      this.lastCandle.low = dataToSend[3];
-      this.lastCandle.close = dataToSend[4];
-      this.lastCandle.volume = parseFloat(dataToSend[5]);
+      console.log("Novo candle", dataToSend.time, dataToSend.date);
+      this.lastCandle = dataToSend;
     }
 
-    data = {
-      date: this.lastCandle.time,
-      open: this.lastCandle.open,
-      high: this.lastCandle.high,
-      low: this.lastCandle.low,
-      close: this.lastCandle.close,
-      volume: this.lastCandle.volume,
-    };
-
-    return JSON.stringify(data);
+    return JSON.stringify(this.lastCandle);
   }
 
   stop() {
@@ -131,7 +206,6 @@ class ChartManager {
       console.log("Transmissão encerrada");
     }
   }
-
 }
 
 module.exports = ChartManager;

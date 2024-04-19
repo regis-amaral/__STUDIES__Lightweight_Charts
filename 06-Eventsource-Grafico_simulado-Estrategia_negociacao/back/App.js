@@ -5,7 +5,7 @@ let clients = [];
 
 let startChartTimestamp = new Date("2024/04/17 12:34:00").getTime();
 
-let transmissionSpeed = 1000;
+let transmissionSpeed = 100;
 
 http
   .createServer((req, res) => {
