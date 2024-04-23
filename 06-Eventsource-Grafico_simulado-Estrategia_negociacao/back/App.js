@@ -3,9 +3,9 @@ const ChartManager = require("./ChartManager");
 
 let clients = [];
 
-let startChartTimestamp = new Date("2024/04/17 12:34:00").getTime();
+let startChartTimestamp = new Date("2023/01/01 00:00:00").getTime();
 
-let transmissionSpeed = 100;
+let transmissionSpeed = 10;
 
 http
   .createServer((req, res) => {
@@ -33,13 +33,14 @@ function dispachEvent(url, res) {
 }
 
 function init(res) {
+  console.log("init...");
   const client = {
     response: res,
     id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Use a unique identifier for each client
   };
   clients.push(client);
-  let chartManager = new ChartManager(client, startChartTimestamp, transmissionSpeed);
   console.log("Novo cliente conectado: " + clients.indexOf(client));
+  let chartManager = new ChartManager(client, startChartTimestamp, transmissionSpeed);
   res.on("close", () => {
     chartManager.stop();
     chartManager = null;

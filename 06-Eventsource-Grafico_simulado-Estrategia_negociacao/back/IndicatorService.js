@@ -5,8 +5,10 @@ const { promisify } = require("util");
 //Promisify Functions
 const sma_async = promisify(tulind.indicators.sma.indicator);
 const ema_async = promisify(tulind.indicators.ema.indicator);
+const macd_async = promisify(tulind.indicators.macd.indicator);
 
 class IndicatorService {
+  
   constructor() {
     this.sma_inc = null;
     this.ema_inc = null;
@@ -16,7 +18,12 @@ class IndicatorService {
     data = await this.setEma(data, 17, "ema1");
     data = await this.setEma(data, 72, "ema2");
     data = await this.setEma(data, 200, "ema3");
+    data = await this.setMacd(data, 12, 26, 9);
     return data;
+  }
+
+  async setLines(data) {
+
   }
 
   /**
@@ -54,6 +61,27 @@ class IndicatorService {
     data = data.map((d, i) => {
       const newData = { ...d };
       newData[propertyName] = d3[i];
+      return newData;
+    });
+    return data;
+  }
+
+  async setMacd(data, shortPeriod, longPeriod, signalPeriod) {
+    const d1 = data.map((d) => d.close);
+    const results = await macd_async([d1], [shortPeriod, longPeriod, signalPeriod]);
+    const macd = results[0];
+    const signal = results[1];
+    const histogram = results[2];
+    const diff = data.length - macd.length;
+    const emptyArray = [...new Array(diff)].map((d) => "");
+    const macdArray = [...emptyArray, ...macd];
+    const signalArray = [...emptyArray, ...signal];
+    const histogramArray = [...emptyArray, ...histogram];
+    data = data.map((d, i) => {
+      const newData = { ...d };
+      newData.macd = macdArray[i];
+      newData.signal = signalArray[i];
+      newData.histogram = histogramArray[i];
       return newData;
     });
     return data;
