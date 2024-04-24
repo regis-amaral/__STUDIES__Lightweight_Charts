@@ -26,7 +26,7 @@ class BinanceServices {
         t += 1;
         if(t < 11){
           log("Tentando novamente em 2 segundos");
-           await new Promise((resolve) => setTimeout(resolve, 2000));
+           await new Promise((resolve) => setTimeout(resolve, 5000));
            return getD(symbol, interval, startChartTimestamp, quantity);
         }
       }

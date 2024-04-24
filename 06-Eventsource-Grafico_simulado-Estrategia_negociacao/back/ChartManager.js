@@ -23,8 +23,8 @@ class ChartManager {
     this.run = true;
     this.lastCandle = null;
 
-    this.trades = [];
-    this.tradeRuler = new TradeRuler(this.trades); // Instância do TradeRuler
+    this.tradeList = [];
+    this.tradeRuler = new TradeRuler(this.tradeList); // Instância do TradeRuler
 
     this.preloadingDataChart1m(1000).then(() => {
       this.startFetchingData();
@@ -128,7 +128,7 @@ class ChartManager {
         // Envia novo request com startTime incrementado em 1000 segundos
         this.startChartTimestamp += 1000 * 1000;
         await this.fetchChartData();
-        if (!this.dataChart1s) return;
+        // if (!this.dataChart1s) return;
         // log("Novos dados de mercado recebidos com sucesso");
       }
 
@@ -204,7 +204,7 @@ class ChartManager {
   sendResponseWrite(data) {
     let J = {
       chart: data,
-      trades: this.trades,
+      trades: this.tradeList,
     }
     this.client.response.write(`data: ${JSON.stringify(J)}\n\n`);
   }
