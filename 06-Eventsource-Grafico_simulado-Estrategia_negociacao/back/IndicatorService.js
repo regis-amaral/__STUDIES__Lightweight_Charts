@@ -8,23 +8,29 @@ const ema_async = promisify(tulind.indicators.ema.indicator);
 const macd_async = promisify(tulind.indicators.macd.indicator);
 
 class IndicatorService {
-  
   constructor() {
     this.sma_inc = null;
     this.ema_inc = null;
+    this.debug = true;
   }
 
   async setIndicators(data) {
+    this.debugLog("Configurando indicadores");
     data = await this.setEma(data, 17, "ema1");
     data = await this.setEma(data, 72, "ema2");
     data = await this.setEma(data, 200, "ema3");
     data = await this.setMacd(data, 12, 26, 9);
+    this.debugLog("Fim: Configurando indicadores");
     return data;
   }
 
-  async setLines(data) {
-
+  debugLog(msg) {
+    if (this.debug) {
+      console.log(msg);
+    }
   }
+
+  async setLines(data) {}
 
   /**
    * Calculates the Simple Moving Average (SMA) for the given data.
@@ -68,7 +74,10 @@ class IndicatorService {
 
   async setMacd(data, shortPeriod, longPeriod, signalPeriod) {
     const d1 = data.map((d) => d.close);
-    const results = await macd_async([d1], [shortPeriod, longPeriod, signalPeriod]);
+    const results = await macd_async(
+      [d1],
+      [shortPeriod, longPeriod, signalPeriod]
+    );
     const macd = results[0];
     const signal = results[1];
     const histogram = results[2];

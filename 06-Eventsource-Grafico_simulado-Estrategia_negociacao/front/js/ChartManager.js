@@ -1,5 +1,4 @@
 class ChartManager {
-
   constructor(domElement) {
     this.domElement = domElement;
 
@@ -24,19 +23,22 @@ class ChartManager {
     this.topPriceLine = null;
     this.basePriceLine = null;
 
-
     // MEDIAS EXPONENCIAIS
     this.ema1_series = this.chart.addLineSeries({
+      priceScaleId: "left",
       color: "green",
       lineWidth: 1,
     });
     this.ema2_series = this.chart.addLineSeries({
+      priceScaleId: "left",
       color: "red",
       lineWidth: 1,
     });
     this.ema3_series = this.chart.addLineSeries({
+      priceScaleId: "left",
       color: "orange",
-      lineWidth: 1,
+      lineWidth: 2,
+      lineStyle: 2,
     });
 
     // MACD FAST
@@ -51,7 +53,7 @@ class ChartManager {
       lineWidth: 1,
       pane: 1,
     });
-    //MACD HISTOGRAM 
+    //MACD HISTOGRAM
     this.macd_histogram_series = this.chart.addHistogramSeries({
       pane: 1,
     });
@@ -75,17 +77,37 @@ class ChartManager {
       this.macd_fast_series.update({ time: candle.time, value: candle.macd });
     }
     if ("signal" in candle) {
-      this.macd_signal_series.update({ time: candle.time, value: candle.signal });
+      this.macd_signal_series.update({
+        time: candle.time,
+        value: candle.signal,
+      });
     }
     if ("histogram" in candle) {
-      this.macd_histogram_series.update({ time: candle.time, value: candle.histogram });
+      this.macd_histogram_series.update({
+        time: candle.time,
+        value: candle.histogram,
+      });
     }
   }
 
-  async updateData(newData) {
+  // exibe trade no gráfico
+  showTradeInChart(trade){
 
+    this.tradeLinesSeries = this.chart.addLineSeries({
+      color: "blue",
+      lineWidth: 1,
+      lineStyle: 4, //4
+    });
+
+    this.tradeLinesSeries.setData([
+      { time: trade.time, value: trade.price },
+      { time: trade.sellDate, value: 16553.54 },
+    ]);
+  }
+
+  async updateData(newData) {
     let chartData = newData.chart;
-    
+
     let trades = newData.trades;
 
     // Plotar trades
@@ -95,7 +117,6 @@ class ChartManager {
 
     try {
       if (Array.isArray(chartData)) {
-        
         // console.log(JSON.stringify(chartData, null, 2));
 
         this.candlestickSeries.setData(chartData);
@@ -114,7 +135,7 @@ class ChartManager {
           .filter((d) => d.ema3)
           .map((d) => ({ time: d.time, value: d.ema3 }));
         this.ema3_series.setData(ema3_data);
-          
+
         const macd_fast_data = chartData
           .filter((d) => d.macd)
           .map((d) => ({ time: d.time, value: d.macd }));
@@ -129,7 +150,7 @@ class ChartManager {
           .filter((d) => d.histogram)
           .map((d) => ({ time: d.time, value: d.histogram }));
         this.macd_histogram_series.setData(macd_histogram_data);
-        
+
       } else {
         this.updateEma(chartData);
         this.candlestickSeries.update(chartData);
@@ -166,22 +187,8 @@ class ChartManager {
         }
       }
 
-       this.chart.timeScale().scrollToPosition(2, true);
+      this.chart.timeScale().scrollToPosition(2, true);
 
-      // this.lowPrice = !this.lowPrice ? newData.low : this.lowPrice;
-
-      // if (this.lowPrice && newData.low < this.lowPrice) {
-      //   this.lowPrice = newData.low;
-      //   if (this.circle) {
-      //     this.chart.removeDrawing(this.circle);
-      //   }
-      //   this.circle = this.chart.addCircleAtPosition({
-      //     time: newData.time,
-      //     price: newData.low,
-      //     color: "green",
-      //     radius: 5,
-      //   });
-      // }
     } catch (error) {
       console.log(newData);
       console.error("Error fetching or parsing data:", error);

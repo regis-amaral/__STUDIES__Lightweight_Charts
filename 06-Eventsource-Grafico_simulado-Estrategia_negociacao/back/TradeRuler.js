@@ -1,7 +1,9 @@
 const { log, error } = console;
+const DB = require("./DB");
 
 class TradeRuler {
   constructor(tradeList) {
+    this.db = new DB();
     this.tradeList = tradeList;
 
     // Linhas de suporte e resistencia
@@ -19,10 +21,13 @@ class TradeRuler {
 
     // Trades abertos
     this.openTrades = 0;
-    
+
+    // Debug log
+    this.debug = true;
   }
 
-  handle(data) {
+  async handle(data) {
+    this.debugLog("Iniciando processamento trade ruler");
     if (this.topo == null) {
       this.topo = data.high;
     }
@@ -36,9 +41,15 @@ class TradeRuler {
     this.base = !data.low || this.base < data.low ? this.base : data.low;
     data["line_base"] = this.base;
 
-    this.trade(data);
-
+    await this.trade(data);
+    this.debugLog("Fim: Iniciando processamento trade ruler"); 
     return data;
+  }
+
+  debugLog(msg) {
+    if (this.debug) {
+      console.log(msg);
+    }
   }
 
   /**
@@ -51,6 +62,7 @@ class TradeRuler {
    * @returns {object} - The newly created buy trade object.
    */
   buyBtc(time, trigger, price, percent_target, percent_stop, usd, date) {
+    this.debugLog("Compra BTC");
     let btcUnits = this.calculateUsd1perctFromBalance(price);
     // não compra se não houver saldo
     if(btcUnits == 0){
@@ -60,6 +72,9 @@ class TradeRuler {
     this.usdBalance =  this.usdBalance - btcUnits * price;
     // aumenta o saldo em btc
     this.btcBalance = this.btcBalance + btcUnits;
+
+    this.debugLog("Fim: Compra BTC");
+
     // retorna o objeto de posição de trade
     return {
       id: this.tradeList.length + 1,
@@ -79,9 +94,11 @@ class TradeRuler {
       opentrades: this.openTrades,
       sellDate: null,
     };
+    
   }
 
   sellBtc(trade, price, date) {
+    this.debugLog("Venda BTC");
     // aumenta o saldo em usd
     this.usdBalance = this.usdBalance + (trade.btcUnits * price);
     // reduz saldo em btc
@@ -99,9 +116,11 @@ class TradeRuler {
     trade.opentrades = this.openTrades;
     trade.sellDate = date;
     console.log("Vendido ", trade);
+    this.debugLog("Fim: Venda BTC");
   }
 
   calculateUsd1perctFromBalance(price){
+    this.debugLog("Calculando quantidade de BTC para compra");
     let q = 0;
     //calcula a quantidade de trades abertos
     this.tradeList.forEach((t) => {
@@ -123,10 +142,12 @@ class TradeRuler {
     // valor final da compra em unidade de BTC
     let btcUnits = usd > minUsd ? usd : minUsd;
     btcUnits = (btcUnits / price).toFixed(5);
+    this.debugLog("Fim: Calculando quantidade de BTC para compra");
     return btcUnits * 1;
   }
 
-  trade(data) {
+  async trade(data) {
+    this.debugLog("Iniciando verificação de trade");
     let percent = 0.005; // 0.01 = 1%
 
     let targetprice = percent + (percent * 0.5);
@@ -158,17 +179,18 @@ class TradeRuler {
       this.tradeList.push(t);
       
       console.log("Comprado ", t);
+
+      this.db.saveOrUpdate(t);
     }
 
     // VENDER QUANDO ATINGIR O TARGET
     this.tradeList.forEach((t) => {
       if (t.status == "open" && data.close >= t.target) {
         this.sellBtc(t, data.close, data.date);
+        this.db.saveOrUpdate(t);
       }
     });
-
-
-
+    this.debugLog("Fim: Iniciando verificação de trade");
   }
 }
 

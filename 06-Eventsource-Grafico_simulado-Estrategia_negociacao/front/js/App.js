@@ -3,8 +3,13 @@ import ChartManager from "./ChartManager.js";
 // REFERENCIA O ELEMENTO HTML ONDE O GRÁFICO SERÁ RENDERIZADO
 const domElement = document.getElementById("lightweight-chart");
 
+const domTradeList = document.getElementById("trade-list");
+
 // INSTANCIA A CLASSE ChartManager
 const chartManager = new ChartManager(domElement);
+
+// Remove trades no sessionStorage
+sessionStorage.removeItem("trades");
 
 // Função para conectar SSE
 function connectSSE() {
@@ -19,6 +24,9 @@ function connectSSE() {
 
     // chamar o método updateData da classe ChartManager
     chartManager.updateData(data);
+
+    // Armazena trades no sessionStorage
+    localStorage.setItem("trades", JSON.stringify(data.trades));
   };
 
   // criar um evento para quando ocorrer um erro

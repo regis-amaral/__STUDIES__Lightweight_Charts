@@ -26,21 +26,28 @@ class ChartManager {
     this.tradeList = [];
     this.tradeRuler = new TradeRuler(this.tradeList); // Instância do TradeRuler
 
+    this.debug = true;
+
     this.preloadingDataChart1m(1000).then(() => {
-      this.startFetchingData();
+      // this.startFetchingData();
     });
   }
 
-  
   async preloadingDataChart1m(minutesAgo) {
-    try{
+    try {
       // Calcula o tempo de minutesAgo minutos atrás
       const twentyMinutesInMillis = minutesAgo * 60 * 1000; // minutesAgo minutos em milissegundos
-      const startTimeTwentyMinutesAgo = this.startChartTimestamp - twentyMinutesInMillis;
+      const startTimeTwentyMinutesAgo =
+        this.startChartTimestamp - twentyMinutesInMillis;
 
       // Busca os dados do mercado na Binance
-      let data = await this.binanceServices.getData(this.symbol, "1m", startTimeTwentyMinutesAgo, minutesAgo);
-      
+      let data = await this.binanceServices.getData(
+        this.symbol,
+        "1m",
+        startTimeTwentyMinutesAgo,
+        minutesAgo
+      );
+
       // Processamento básico dos dados
       data = this.dataPreprocessing(data);
 
@@ -49,24 +56,24 @@ class ChartManager {
 
       // Adiciona ao conjunto de dados de 1m
       this.dataChart1m = data;
-      
+
       // Envia dados ao cliente
       this.sendResponseWrite(data);
 
       log("quantidade de registros enviados: ", data.length);
-    }catch(e){
+    } catch (e) {
       error("Erro ao precarregar dados do gráfico de 1m", e);
     }
   }
 
-  dataPreprocessing(data){
-    
+  dataPreprocessing(data) {
+    this.debugLog("Processando dados do mercado");
     // Ajusta o tempo para GMT-3
     let setDt = (dt) => {
       let d = new Date(dt);
       return d.setHours(d.getHours() - 3);
     };
-    
+    this.debugLog("Fim: Processando dados do mercado");
     return data.map((d) => ({
       time: setDt(d[0]) / 1000,
       date: new Date(setDt(d[0])),
@@ -83,7 +90,8 @@ class ChartManager {
    * @returns {Promise<void>} Uma promise que é resolvida quando os dados do gráfico são buscados com sucesso.
    */
   async fetchChartData() {
-    try{
+    this.debugLog("Buscando dados do mercado");
+    try {
       // Busca os dados do mercado na Binance
       let data = await this.binanceServices.getData(
         this.symbol,
@@ -91,16 +99,22 @@ class ChartManager {
         this.startChartTimestamp,
         1000
       );
-      if(data){
+      if (data) {
         let klinedata = this.dataPreprocessing(data);
         // Adiciona os dados buscados ao conjunto de dados existentes
         this.dataChart1s = this.dataChart1s
           ? [...this.dataChart1s, ...klinedata]
           : klinedata;
       }
-      
-    }catch(e){
+      this.debugLog("Fim: Buscando dados do mercado");
+    } catch (e) {
       error("Erro ao buscar dados do gráfico de 1s", e);
+    }
+  }
+
+  debugLog(msg) {
+    if (this.debug) {
+      log(msg);
     }
   }
 
@@ -116,35 +130,41 @@ class ChartManager {
 
     // inicializa o envio de dados
     const sendData = async () => {
+      this.debugLog(`Enviando dado do índice ${this.currentIndex}`);
 
       // encerra a transmissão se a execução foi interrompida pelo App.js
       if (!this.run) {
         clearTimeout(this.timer);
+        this.debugLog(`Transmissão encerrada pelo App.js`);
         return;
       }
 
-      // atualiza um pouco antes de alcançar o fim da lista sem parar a execução do código
-      if (this.currentIndex == this.dataChart1s.length - 200) {
-        // Envia novo request com startTime incrementado em 1000 segundos
-        this.startChartTimestamp += 1000 * 1000;
-        await this.fetchChartData();
-        // if (!this.dataChart1s) return;
-        // log("Novos dados de mercado recebidos com sucesso");
-      }
-
-      let dataToSend = this.dataChart1s[this.currentIndex];
-
-      // Constrói tempo com segundos zerados para candle de 1 minuto
-      let date = new Date(dataToSend.time * 1000);
-      date.setSeconds(0);
-      dataToSend.time = date.getTime() / 1000;
-
       try {
+        // atualiza um pouco antes de alcançar o fim da lista sem parar a execução do código
+        if (this.currentIndex == this.dataChart1s.length - 1000) {
+          // Envia novo request com startTime incrementado em 1000 segundos
+          this.startChartTimestamp += 1000 * 1000;
+          this.fetchChartData();
+          // if (!this.dataChart1s) return;
+          // log("Novos dados de mercado recebidos com sucesso");
+        }
+
+        let dataToSend = this.dataChart1s[this.currentIndex];
+
+        if(dataToSend == undefined){
+          throw new Error("Aguardando dados de mercado para prosseguir"); 
+        }
+
+        // Constrói tempo com segundos zerados para candle de 1 minuto
+        let date = new Date(dataToSend.time * 1000);
+        date.setSeconds(0);
+        dataToSend.time = date.getTime() / 1000;
+
         // Verifica se é um novo candle e recalcula os indicadores do último candle de 1m
         if (this.lastCandle && this.lastCandle.time != dataToSend.time) {
           // Adiciona candle ao conjunto de dados de 1m
           this.dataChart1m.push(this.lastCandle);
-          
+
           // Recalcula os indicadores para o último candle de 1m
           let r = await this.indicatorService.setIndicators(
             this.dataChart1m.slice(-1000)
@@ -157,26 +177,30 @@ class ChartManager {
         // Configura dados para envio
         dataToSend = this.configDataToSend(dataToSend);
 
-        // Adiciona campos Trade Rules
-        dataToSend = this.tradeRuler.handle(dataToSend);
+        // Executa verificação de trades
+        dataToSend = await this.tradeRuler.handle(dataToSend);
 
         // Envia dados formatados
         this.sendResponseWrite(dataToSend);
 
         this.currentIndex++;
+
+        this.timer = setTimeout(sendData, this.transmissionSpeed);
+
+        this.debugLog(`Fim: Enviando dado do índice ${this.currentIndex - 1}`);
       } catch (e) {
-        log(`Enviando dado do índice ${this.currentIndex}`);
-        log(dataToSend);
-        error("Erro ao configurar dados:", e);
+        log(`Erro: Enviando dado do índice ${this.currentIndex}`);
+        error(e);
+        setTimeout(sendData, this.transmissionSpeed);
       }
-      this.timer = setTimeout(sendData, this.transmissionSpeed);
+      
     };
 
     sendData();
   }
 
   configDataToSend(dataToSend) {
-    
+    this.debugLog("Configurando dados para envio");
     if (!this.lastCandle) {
       this.lastCandle = {};
     }
@@ -197,16 +221,18 @@ class ChartManager {
       // console.log("Novo candle", dataToSend.time, dataToSend.date);
       this.lastCandle = dataToSend;
     }
-
+    this.debugLog("Fim: Configurando dados para envio");
     return this.lastCandle;
   }
 
   sendResponseWrite(data) {
+    this.debugLog("Enviando dados ao cliente");
     let J = {
       chart: data,
       trades: this.tradeList,
-    }
+    };
     this.client.response.write(`data: ${JSON.stringify(J)}\n\n`);
+    this.debugLog("Fim: Enviando dados ao cliente");
   }
 
   stop() {
