@@ -3,7 +3,7 @@ const ChartManager = require("./ChartManager");
 
 let clients = [];
 
-let startChartTimestamp = new Date("2023/01/02 00:53:00").getTime();
+let startChartTimestamp = new Date("2023/01/09 12:53:00").getTime();
 
 let transmissionSpeed = 5;
 
@@ -40,7 +40,7 @@ function init(res) {
   };
   clients.push(client);
   console.log("Novo cliente conectado: " + clients.indexOf(client));
-  let chartManager = new ChartManager(client, startChartTimestamp, transmissionSpeed);
+  let chartManager = new ChartManager(client, startChartTimestamp, transmissionSpeed, null, null);
   res.on("close", () => {
     chartManager.stop();
     chartManager = null;

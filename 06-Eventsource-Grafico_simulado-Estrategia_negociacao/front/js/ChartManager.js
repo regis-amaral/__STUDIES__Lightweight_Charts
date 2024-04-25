@@ -15,6 +15,21 @@ class ChartManager {
       chartProperties
     );
 
+    this.chart.applyOptions({
+      title: "Graph",
+      localization: {
+        dateFormat: "dd-MM-yyyy",
+        locale: "pt-BR",
+      },
+      timeScale: {
+        rightOffset: 20,
+        fixRightEdge: true
+      },
+      priceScale: {
+        drawTicks: false
+      },
+    });
+
     this.candlestickSeries = this.chart.addCandlestickSeries();
 
     // Marcadores de preço monitorados
@@ -112,7 +127,7 @@ class ChartManager {
 
     // Plotar trades
     if (trades && trades.length > 0) {
-      // console.log(trades);
+      this.showMarkers(trades);
     }
 
     try {
@@ -151,6 +166,8 @@ class ChartManager {
           .map((d) => ({ time: d.time, value: d.histogram }));
         this.macd_histogram_series.setData(macd_histogram_data);
 
+        this.chart.timeScale().scrollToPosition(2, true);
+        
       } else {
         this.updateEma(chartData);
         this.candlestickSeries.update(chartData);
@@ -187,12 +204,47 @@ class ChartManager {
         }
       }
 
-      this.chart.timeScale().scrollToPosition(2, true);
+      
 
     } catch (error) {
       console.log(newData);
       console.error("Error fetching or parsing data:", error);
     }
+  }
+
+  showMarkers(trades) {
+    let markers = [];
+
+    trades.forEach((trade) => {
+
+      // marcador de compra
+      markers.push({
+        time: trade.buy.time,
+        position: "belowBar",
+        color: "green",
+        shape: "arrowUp",
+        id: "C" + trade.id,
+        text: "C" + trade.id,
+        size: 2,
+      });
+
+      // marcador de venda
+      if(trade.sell.time){
+        markers.push({
+          time: trade.sell.time,
+          position: "aboveBar",
+          color: "red",
+          shape: "arrowDown",
+          id: "V" + trade.id,
+          text: "V" + trade.id,
+          size: 2,
+        });
+      }
+
+    });
+
+    this.candlestickSeries.setMarkers(markers);
+
   }
 }
 

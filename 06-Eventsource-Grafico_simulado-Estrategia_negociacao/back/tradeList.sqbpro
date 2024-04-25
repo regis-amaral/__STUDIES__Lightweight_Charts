@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="/home/regis/Documentos/__STUDIES__Lightweight_Charts/06-Eventsource-Grafico_simulado-Estrategia_negociacao/back/tradeList.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="2039"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><current_table name="4,20:maintrades_1714049631801"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="trades_1714049631801" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_"><sort/><column_widths><column index="1" value="49"/><column index="2" value="121"/><column index="3" value="69"/><column index="4" value="63"/><column index="5" value="61"/><column index="6" value="53"/><column index="7" value="49"/><column index="8" value="49"/><column index="9" value="87"/><column index="10" value="159"/><column index="11" value="95"/><column index="12" value="86"/><column index="13" value="88"/><column index="14" value="74"/><column index="15" value="75"/><column index="16" value="88"/><column index="17" value="72"/><column index="18" value="73"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="SQL 1">select ROUND(sum(total_value_bought),2) as total_investido, 
+	ROUND(sum(profit),2) as total_ganho,
+	ROUND((sum(profit) / sum(total_value_bought) * 100),2) AS percent_profit
+	from (
+	SELECT 
+		id,
+		date,
+		profit,
+		usdBalance,
+		btcBalance,
+		totalBalance,
+		opentrades,
+		buy_time,
+		buy_price,
+		buy_units,
+		(buy_units * buy_price) AS total_value_bought
+	FROM 
+		trades_2542024_123127
+	WHERE	
+		status = &quot;closed&quot;
+	)</sql><sql name="SQL 2">SELECT 
+		id,
+		date,
+		profit,
+		usdBalance,
+		btcBalance,
+		totalBalance,
+		opentrades,
+		buy_time,
+		buy_price,
+		buy_units,
+		(buy_units * buy_price) AS total_value_bought,
+		ROUND((profit / (buy_units * buy_price) * 100), 2) AS percent_profit
+	FROM 
+		trades_2542024_123127
+	WHERE	
+		status = &quot;closed&quot;</sql><sql name="SQL 3">select * FROM trades_2542024_123127 where status = &quot;open&quot;</sql><current_tab id="1"/></tab_sql></sqlb_project>

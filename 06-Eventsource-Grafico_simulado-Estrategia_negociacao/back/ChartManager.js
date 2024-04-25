@@ -5,7 +5,8 @@ const TradeRuler = require("./TradeRuler");
 const BinanceServices = require("./BinanceServices");
 
 class ChartManager {
-  constructor(client, startChartTimestamp, transmissionSpeed) {
+
+  constructor(client, startChartTimestamp, transmissionSpeed, maxOpenTrades, percenOfAmount) {
     //
     this.indicatorService = new IndicatorService(); // Instância do serviço de indicadores
     this.binanceServices = new BinanceServices(); // Instância do serviço da Binance
@@ -24,12 +25,12 @@ class ChartManager {
     this.lastCandle = null;
 
     this.tradeList = [];
-    this.tradeRuler = new TradeRuler(this.tradeList); // Instância do TradeRuler
+    this.tradeRuler = new TradeRuler(this.tradeList, maxOpenTrades, percenOfAmount); // Instância do TradeRuler
 
-    this.debug = true;
+    this.debug = false;
 
     this.preloadingDataChart1m(1000).then(() => {
-      // this.startFetchingData();
+      this.startFetchingData();
     });
   }
 
@@ -76,7 +77,7 @@ class ChartManager {
     this.debugLog("Fim: Processando dados do mercado");
     return data.map((d) => ({
       time: setDt(d[0]) / 1000,
-      date: new Date(setDt(d[0])),
+      date: new Date(setDt(d[0])).toISOString(), //new Date(setDt(d[0])).toLocaleString("pt-BR"),
       open: d[1] * 1,
       high: d[2] * 1,
       low: d[3] * 1,
@@ -144,7 +145,11 @@ class ChartManager {
         if (this.currentIndex == this.dataChart1s.length - 1000) {
           // Envia novo request com startTime incrementado em 1000 segundos
           this.startChartTimestamp += 1000 * 1000;
-          this.fetchChartData();
+          if(this.client){
+            this.fetchChartData();
+          }else{
+            await this.fetchChartData();
+          }
           // if (!this.dataChart1s) return;
           // log("Novos dados de mercado recebidos com sucesso");
         }
@@ -185,13 +190,21 @@ class ChartManager {
 
         this.currentIndex++;
 
-        this.timer = setTimeout(sendData, this.transmissionSpeed);
+        if(this.client){
+          this.timer = setTimeout(sendData, this.transmissionSpeed);
+        }else{
+          sendData();
+        }
 
         this.debugLog(`Fim: Enviando dado do índice ${this.currentIndex - 1}`);
       } catch (e) {
         log(`Erro: Enviando dado do índice ${this.currentIndex}`);
         error(e);
-        setTimeout(sendData, this.transmissionSpeed);
+        if (this.client) {
+          this.timer = setTimeout(sendData, this.transmissionSpeed);
+        } else {
+          sendData();
+        }
       }
       
     };
@@ -226,6 +239,9 @@ class ChartManager {
   }
 
   sendResponseWrite(data) {
+    if(this.client == null){
+      return;
+    }
     this.debugLog("Enviando dados ao cliente");
     let J = {
       chart: data,

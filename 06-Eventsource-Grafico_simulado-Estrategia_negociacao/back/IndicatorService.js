@@ -11,7 +11,7 @@ class IndicatorService {
   constructor() {
     this.sma_inc = null;
     this.ema_inc = null;
-    this.debug = true;
+    this.debug = false;
   }
 
   async setIndicators(data) {
