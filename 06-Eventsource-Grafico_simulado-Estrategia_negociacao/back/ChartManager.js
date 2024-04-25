@@ -25,7 +25,7 @@ class ChartManager {
     this.lastCandle = null;
 
     this.tradeList = [];
-    this.tradeRuler = new TradeRuler(this.tradeList, maxOpenTrades, percenOfAmount); // Instância do TradeRuler
+    this.tradeRuler = new TradeRuler(this.tradeList, maxOpenTrades, percenOfAmount, startChartTimestamp); // Instância do TradeRuler
 
     this.debug = false;
 

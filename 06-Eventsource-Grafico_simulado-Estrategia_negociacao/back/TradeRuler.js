@@ -2,8 +2,8 @@ const { log, error } = console;
 const DB = require("./DB");
 
 class TradeRuler {
-  constructor(tradeList, maxOpenTrades, percenOfAmount) {
-    this.db = new DB();
+  constructor(tradeList, maxOpenTrades, percenOfAmount, startChartTimestamp) {
+    this.db = new DB(startChartTimestamp);
     this.tradeList = tradeList;
     this.maxOpenTrades = maxOpenTrades ?? 50;
     this.percenOfAmount = percenOfAmount ?? 0.01; // 0.01 = 1%
@@ -166,7 +166,6 @@ class TradeRuler {
 
   async trade(data) {
     this.debugLog("Iniciando verificação de trade");
-
 
     let targetprice = this.percenOfAmount + this.percenOfAmount * 0.5;
 

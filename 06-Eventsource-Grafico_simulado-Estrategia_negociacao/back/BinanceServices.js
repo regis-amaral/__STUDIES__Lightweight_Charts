@@ -42,14 +42,14 @@ class BinanceServices {
     let getD = async (data) => {
       try {
         const response = await axios.get(url);
-        data = response.data;
+        return response.data;
       } catch (error) {
         log("Tentando novamente em 2 segundos");
         await new Promise((resolve) => setTimeout(resolve, 2000));
         return getD(data);
       }
     };
-    getD(data);
+    data = getD(data);
 
     // Armazena os dados no cache do Redis
     await this.storeInCache(url, data);

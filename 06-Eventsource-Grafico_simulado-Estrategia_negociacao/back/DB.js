@@ -1,9 +1,20 @@
 const sqlite3 = require("sqlite3").verbose();
 
 class DB {
-  constructor() {
-    const currentDate = new Date();
-    const formattedDate = `${currentDate.getDate()}${(currentDate.getMonth() + 1).toString().padStart(2, '0')}${currentDate.getFullYear()}_${currentDate.getHours()}${currentDate.getMinutes()}${currentDate.getSeconds()}`;
+  constructor(startChartTimestamp) {
+    const currentDate = new Date(startChartTimestamp);
+    // Obtendo os componentes individuais da data
+    const dia = currentDate.getDate().toString().padStart(2, '0'); // Dia com dois dígitos
+    const mes = (currentDate.getMonth() + 1).toString().padStart(2, '0'); // Mês com dois dígitos (lembrando que os meses começam de zero)
+    const ano = currentDate.getFullYear().toString(); // Ano com quatro dígitos
+    // Obtendo os componentes individuais da hora
+    const hora = currentDate.getHours().toString().padStart(2, '0'); // Hora com dois dígitos
+    const minuto = currentDate.getMinutes().toString().padStart(2, '0'); // Minuto com dois dígitos
+    const segundo = currentDate.getSeconds().toString().padStart(2, '0'); // Segundo com dois dígitos
+    // Montando a string formatada
+    const formattedDate = `${dia}${mes}${ano}_${hora}${minuto}${segundo}`;
+    //console.log(dataFormatada); // Saída: "DDMMAAA_HHMMSS"
+
     this.table_name = `trades`;
     this.db = new sqlite3.Database(`./databases/${formattedDate}.db`, (err) => {
       if (err) {
